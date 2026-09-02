@@ -1,7 +1,14 @@
-const REAL_SOCKET = "/Users/akgunay/.config/herdr/herdr.sock";
+const KNOWN_LIVE_SOCKET = "/Users/akgunay/.config/herdr/herdr.sock";
+const inheritedHerdrEnv = process.env.HERDR_ENV;
+const inheritedSocketPath = process.env.HERDR_SOCKET_PATH;
 
-if (process.env.HERDR_SOCKET_PATH === REAL_SOCKET) {
-  throw new Error(`Refusing to run tests against the live Herdr socket: ${REAL_SOCKET}`);
+if (inheritedSocketPath === KNOWN_LIVE_SOCKET) {
+  throw new Error(`Refusing to run tests against the known live Herdr socket: ${KNOWN_LIVE_SOCKET}`);
+}
+if (inheritedHerdrEnv === "1" && inheritedSocketPath) {
+  throw new Error(
+    `Refusing to run tests with inherited live Herdr reporting enabled: ${inheritedSocketPath}`,
+  );
 }
 
 // Tests that need transport enablement replace these with a listening temp socket.
