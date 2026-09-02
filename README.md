@@ -66,11 +66,21 @@ An absolute Atomic session file is sent as `agent_session_path`; otherwise a non
 The end-to-end test launches the installed Atomic 0.9.17 binary in RPC mode with an explicit test-only root opt-in and a temporary session directory. It sends one RPC prompt and observes the real host emit initial idle, agent working, and settled idle transitions. Provider completion content is not part of the assertion. Every child Herdr variable is explicitly overridden to a temporary fake socket and fake pane id.
 
 ## Workflow-lifecycle verification
-<!-- ROUND2: workflow verification findings go here -->
+
+**Negative finding:** installed `@bastani/atomic` 0.9.17 exposes exactly 36 public `pi.on(...)` events (`dist/core/extensions/api-types.d.ts:26-62`), and none is a workflow lifecycle event. A background workflow entering `awaiting_input` is recorded only for internal dedupe/status/UI purposes: `emitStageAwaitingInputNoticeOnce` and `emitRunAwaitingInputNoticeOnce` (`dist/builtin/workflows/src/extension/index.bundle.mjs:98023-98038`) add a dedupe key and never call the lifecycle delivery path used by terminal, control, and budget events (`:97991-98020`, `:98039-98047`). The installed documentation confirms this is deliberate: awaiting-input is tracked without waking the main agent (`docs/workflows.md:3284,3292,3648-3652`). Therefore this reporter cannot consume workflow waits and does not fake them.
+
+The workflow-looking bundle strings `workflow_stage_admission`, `workflow_stage_route`, `workflow_stage_message`, `workflow_ui`, `workflow_not_found`, and `workflow_tool` are bundler initializers, internal Intercom broker protocol frames, or provenance-tag values, not subscribable extension events. Type-level verification agrees: `tsc` rejects `pi.on("workflow_awaiting_input", ...)` with TS2769 because that name is absent from the public overload union.
+
+The nearest non-event alternatives are intentionally not used. The `workflow` tool/command `status` action with `statusFilter: "awaiting_input"` is agent-facing dispatch rather than an event; polling it would create turns and side effects. The derived status file is disabled by default (`statusFile: false`, `docs/workflows.md:3648-3650`), so observing it would require user configuration, watchers, diffing, and all defect-map protections. `~/.atomic/workflows/runs/` is not an authoritative lifecycle store; DBOS/Postgres is the durable catalog. If a future Atomic release exposes workflow lifecycle events, a consumer must never replay historical `started` on snapshot invalidation or resume, must collapse or refcount sibling continuation lineages without dropping a live sibling, must keep stable lineage identity across predecessor pruning, and must preserve terminal tombstones across publisher replacement.
+
+**Intercom/supervisor asks are also not observable through the public extension API.** Inbound asks live in Intercom's private `ReplyTracker.pendingAsks` (`dist/builtin/intercom/index.bundle.mjs:58948-59046`), and the public `pending` tool action reads that private tracker (`:60246-60264`). `ExtensionAPI` exposes neither an `intercom_ask`/`supervisor_ask` event nor a pending-ask accessor. The `subagent:parent-ask-handoff-request` channel (`:59075-59089`) is internal sender-side coordination, not a receiver-side blocked signal.
+
+**Confidence:** the negative is proven statically from the shipped type union and installed workflow implementation, while a live RPC probe confirmed that the loader and documented session/agent hooks fire. A real background workflow reaching `awaiting_input` was not launched because its DBOS durable backend would write outside the permitted probe boundary; that live path is therefore unproven by probe but directly proven by shipped code.
 
 ## Known limitations
 
 - Atomic's project-trust prompt is host-owned and is not exposed through `ui_prompt_start` / `ui_prompt_end`, so this extension cannot report that trust wait.
+- Background workflow waits are invisible because Atomic 0.9.17 exposes no workflow lifecycle extension event; they are not reported as blocked.
 - Supervisor and Intercom asks are invisible from extension land in this design; they are not reported as blocked.
 - The default `herdr:atomic` / `atomic` identity provides presentation-level acceptance only until Herdr recognizes that pair as a full-lifecycle authority. Screen/process fallback can still compete. Tier B is a local-only compatibility masquerade.
 - State and sequence continuity survive `/reload` in the current Atomic process, not a process restart.
@@ -92,4 +102,4 @@ pnpm install
 pnpm test
 ```
 
-The suite uses a real temporary Unix socket. Its preload guard refuses to run if `HERDR_SOCKET_PATH` is the known live socket, and each transport test creates and uses its own fake pane endpoint.
+The suite uses a real temporary Unix socket. Its preload guard refuses the known live socket and any inherited environment with live Herdr reporting enabled before replacing the environment with disabled test values; each transport test then creates and uses its own fake pane endpoint.

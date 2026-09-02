@@ -2,21 +2,21 @@
 
 ## Frozen goal
 
-Build and test a standalone Atomic 0.9.17 user extension that reports real Atomic lifecycle state to Herdr, without performing round-2 cutover or contacting the live Herdr socket.
+Build, test, document, and cut over a standalone Atomic 0.9.17 user extension that reports real Atomic lifecycle state to Herdr without contacting the live Herdr socket.
 
 ## Acceptance matrix
 
 | # | Contract behavior | Current-checkout evidence |
 |---|---|---|
-| 1 | Real Atomic 0.9.17 child loads the extension against a fake socket and reports session plus working/idle; real socket receives no traffic | `bun test tests/e2e.test.ts`; child environment overwrites all Herdr variables and test safety guard rejects the real path |
-| 2 | Prompt start reports blocked with exact raw title, prompt end recovers; defensive refcount and precedence blocked > working > idle | `bun test tests/extension.test.ts tests/reducer.test.ts` |
-| 3 | Unchanged state produces no duplicate send | `bun test tests/reducer.test.ts` |
-| 4 | Sequence and last-published state survive extension re-evaluation through `sessionScopedExtensionState` | `bun test tests/reload.test.ts` |
-| 5 | Workflow lifecycle and Intercom observability | Deferred only to the separately assigned round-2 findings; README contains the required exact anchor and no guessed result |
-| 6 | `HERDR_ATOMIC_REPORT_AS_PI=1` switches exact identity; omitted/default is Atomic | `bun test tests/transport.test.ts` |
-| 7 | README includes symlink install, flags, rollback, limitations; prototype copied verbatim | README inspection; `cmp reference/legacy-prototype.ts <source>` |
-| 8 | Cutover | Explicitly excluded from round 1; no symlink or deletion in this task |
-| 9 | All tests green; clean conventional commits; no external Git operations | `bun test`; `git log --oneline`; `git status --porcelain` |
+| 1 | Real Atomic 0.9.17 child loads the extension against a fake socket and reports session plus working/idle; real socket receives no traffic | `npm test` runs `tests/e2e.test.ts`; child environment overwrites all Herdr variables. `tests/safety.test.ts` proves the preload rejects any inherited enabled Herdr environment. |
+| 2 | Prompt start reports blocked with exact raw title, prompt end recovers; defensive refcount and precedence blocked > working > idle | `npm test`: `tests/extension.test.ts`, `tests/reducer.test.ts` |
+| 3 | Unchanged state produces no duplicate send | `npm test`: `tests/reducer.test.ts` |
+| 4 | Sequence and last-published state survive extension re-evaluation through `sessionScopedExtensionState` | `npm test`: `tests/reload.test.ts` |
+| 5 | Workflow lifecycle and Intercom observability | README “Workflow-lifecycle verification” records the installed 0.9.17 negative findings, direct shipped-code/type evidence, rejected alternatives, future invariants, and live-probe confidence boundary. |
+| 6 | `HERDR_ATOMIC_REPORT_AS_PI=1` switches exact identity; omitted/default is Atomic | `npm test`: `tests/transport.test.ts` |
+| 7 | README includes symlink install, flags, rollback, limitations; prototype copied verbatim | README inspection; before deletion, `cmp` returned 0 and both files had SHA-256 `19bfbff4807307d168291544fa8aa80bbcf3c3429522229bee5da00e66a8f163`. |
+| 8 | Global cutover symlink resolves and the old project prototype is removed | `/tmp/herdr-verify/global-discovery.json` captures a real no-`-e` Atomic RPC child reporting session and `idle → working → idle` through the global symlink to a temporary fake socket; state assertions confirm the old path is absent. |
+| 9 | All tests green; clean conventional commits; no external Git operations | `npm test` reports 14 pass/0 fail; `git log --oneline`; empty `git status --porcelain`; empty `git remote -v`. |
 
 ## Constrained interface decisions
 
@@ -32,5 +32,4 @@ Reducer states are idle (`agentActive=false`, no prompts), working (`agentActive
 
 ## Deferred list
 
-- Round 2 must replace the exact workflow-verification README anchor with the separate verifier's evidence.
-- Round 2 owns the global symlink and legacy prototype deletion.
+None within the frozen contract.
