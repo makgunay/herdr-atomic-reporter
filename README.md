@@ -36,7 +36,7 @@ Start a new Atomic session or run `/reload` in an existing one. Production activ
 
 Precedence is `blocked > working > idle`. Atomic 0.9.17 already coalesces overlapping UI prompts into one outer span; the reducer also tracks spans defensively and cannot decrement below zero. An active prompt's title is preserved verbatim. If the title is absent, the message is `Waiting for input`.
 
-Identical state/message pairs are suppressed. Report sequence numbers start from `Date.now() * 1000`, increase strictly, and survive `/reload` through `sessionScopedExtensionState`. Outbound requests share one serialized writer and use one 500 ms attempt followed by one 1500 ms retry.
+Identical state/message pairs are suppressed. Report sequence numbers start from `Date.now() * 1000`, increase strictly, and survive `/reload` through `sessionScopedExtensionState`. Outbound requests share one serialized writer for this extension's identity and use one 500 ms attempt followed by one 1500 ms retry. This discipline cannot prevent a separate extension from writing to the same pane.
 
 ## Environment flags
 
@@ -45,7 +45,14 @@ Identical state/message pairs are suppressed. Report sequence numbers start from
 | `HERDR_ENV=1` | Enables reporting when the socket path and pane id are also present. |
 | `HERDR_SOCKET_PATH` | Herdr Unix-socket path (or Windows pipe name). |
 | `HERDR_PANE_ID` | Target pane id. |
-| `HERDR_ATOMIC_REPORT_AS_PI=1` | **Local-only Tier B masquerade:** report as `herdr:pi` / `pi` instead of the default `herdr:atomic` / `atomic`. Default is off. |
+| `HERDR_ATOMIC_REPORT_AS_PI=1` | **Local-only Tier B masquerade:** report as `herdr:pi` / `pi` instead of the default `herdr:atomic` / `atomic`. Default is off. Do not enable while Herdr's own Pi reporter is also installed; see the warning below. |
+
+**Tier B collision warning:** on machines where Herdr installed
+`~/.pi/agent/extensions/herdr-agent-state.ts`, Atomic loads that legacy global extension in TUI
+sessions too. Enabling `HERDR_ATOMIC_REPORT_AS_PI=1` then makes both extensions publish the same
+`herdr:pi` / `pi` identity to one pane with independent sequence counters, which is worse than the
+default behavior of showing two distinct agents. Check for that file and remove or disable one of
+the two writers before enabling Tier B.
 
 `HERDR_ATOMIC_TEST_ALLOW_RPC_ROOT=1` exists only for the spawned acceptance test. Do not set it in normal use. It lets a real `atomic --mode rpc` child exercise the otherwise TUI-only root predicate against a fake socket.
 
@@ -63,7 +70,7 @@ An absolute Atomic session file is sent as `agent_session_path`; otherwise a non
 
 ## Acceptance test boundary
 
-The end-to-end test launches the installed Atomic 0.9.17 binary in RPC mode with an explicit test-only root opt-in and a temporary session directory. It sends one RPC prompt and observes the real host emit initial idle, agent working, and settled idle transitions. Provider completion content is not part of the assertion. Every child Herdr variable is explicitly overridden to a temporary fake socket and fake pane id.
+The end-to-end test launches the installed Atomic 0.9.17 binary in RPC mode with an explicit test-only root opt-in and a temporary session directory. It sends one RPC prompt, observes the real host emit initial idle, agent working, and settled idle transitions, then closes stdin and verifies that the graceful quit delivers `pane.release_agent` before the child exits. Provider completion content is not part of the assertion. Every child Herdr variable is explicitly overridden to a temporary fake socket and fake pane id.
 
 ## Workflow-lifecycle verification
 
@@ -83,6 +90,7 @@ The nearest non-event alternatives are intentionally not used. The `workflow` to
 - Background workflow waits are invisible because Atomic 0.9.17 exposes no workflow lifecycle extension event; they are not reported as blocked.
 - Supervisor and Intercom asks are invisible from extension land in this design; they are not reported as blocked.
 - The default `herdr:atomic` / `atomic` identity provides presentation-level acceptance only until Herdr recognizes that pair as a full-lifecycle authority. Screen/process fallback can still compete. Tier B is a local-only compatibility masquerade.
+- On machines where Herdr installed `~/.pi/agent/extensions/herdr-agent-state.ts`, Atomic also loads that TUI-only legacy global reporter. It is a second concurrent writer to the same pane (`herdr:pi` / `pi`) alongside this reporter's default `herdr:atomic` / `atomic` identity. The cutover deliberately does not remove or modify that Herdr-managed file because it is outside this project's scope. Disable one writer before enabling Tier B; otherwise both writers collide on the same identity with independent sequence counters.
 - State and sequence continuity survive `/reload` in the current Atomic process, not a process restart.
 
 ## Rollback

@@ -9,6 +9,7 @@ Build, test, document, and cut over a standalone Atomic 0.9.17 user extension th
 | # | Contract behavior | Current-checkout evidence |
 |---|---|---|
 | 1 | Real Atomic 0.9.17 child loads the extension against a fake socket and reports session plus working/idle; real socket receives no traffic | `npm test` runs `tests/e2e.test.ts`; child environment overwrites all Herdr variables. `tests/safety.test.ts` proves the preload rejects any inherited enabled Herdr environment. |
+| 1a | A root-session shutdown flushes pending reports; quit additionally delivers `pane.release_agent` before handler completion, while non-quit shutdown does not release and an unresponsive socket cannot hold shutdown past the 2100 ms bound | `npm test`: deterministic event-wiring, non-quit, and bounded-wait cases in `tests/extension.test.ts`; graceful real-child quit in `tests/e2e.test.ts` |
 | 2 | Prompt start reports blocked with exact raw title, prompt end recovers; defensive refcount and precedence blocked > working > idle | `npm test`: `tests/extension.test.ts`, `tests/reducer.test.ts` |
 | 3 | Unchanged state produces no duplicate send | `npm test`: `tests/reducer.test.ts` |
 | 4 | Sequence and last-published state survive extension re-evaluation through `sessionScopedExtensionState` | `npm test`: `tests/reload.test.ts` |
@@ -16,7 +17,7 @@ Build, test, document, and cut over a standalone Atomic 0.9.17 user extension th
 | 6 | `HERDR_ATOMIC_REPORT_AS_PI=1` switches exact identity; omitted/default is Atomic | `npm test`: `tests/transport.test.ts` |
 | 7 | README includes symlink install, flags, rollback, limitations; prototype copied verbatim | README inspection; before deletion, `cmp` returned 0 and both files had SHA-256 `19bfbff4807307d168291544fa8aa80bbcf3c3429522229bee5da00e66a8f163`. |
 | 8 | Global cutover symlink resolves and the old project prototype is removed | `/tmp/herdr-verify/global-discovery.json` captures a real no-`-e` Atomic RPC child reporting session and `idle → working → idle` through the global symlink to a temporary fake socket; state assertions confirm the old path is absent. |
-| 9 | All tests green; clean conventional commits; no external Git operations | `npm test` reports 14 pass/0 fail; `git log --oneline`; empty `git status --porcelain`; empty `git remote -v`. |
+| 9 | All tests green; clean conventional commits; no external Git operations | `npm test`; `git log --oneline`; empty `git status --porcelain`; empty `git remote -v`. |
 
 ## Constrained interface decisions
 
@@ -25,10 +26,11 @@ Build, test, document, and cut over a standalone Atomic 0.9.17 user extension th
 - Defensive prompt starts retain order and duplicates. The newest active prompt supplies the label; ends remove one active span, while an unmatched end clears prompt state without going negative.
 - Session paths are used verbatim only when absolute; otherwise a non-empty session id is used verbatim. Path takes precedence. Missing references omit both fields and suppress session-only reports.
 - Root activation is TUI-only in production. RPC is accepted only when the explicit test flag `HERDR_ATOMIC_TEST_ALLOW_RPC_ROOT=1` is set, preserving the production contract while enabling the required real-child acceptance check.
+- The transport serializes writes from this extension for its own identity. It cannot exclude separate extensions such as Herdr's TUI-only legacy Pi reporter; README documents that second writer and the Tier B identity-collision risk.
 
 ## Stateful model
 
-Reducer states are idle (`agentActive=false`, no prompts), working (`agentActive=true`, no prompts), and blocked (one or more prompts, regardless of agent activity). Legal transitions are agent start/settle, prompt start/end, and initial sync. Duplicate starts are retained; unmatched ends clear defensively. Invariants: prompt count never negative; blocked wins over working, which wins over idle; sequences strictly increase; identical state/message is suppressed; persisted reducer state is reused across reload.
+Reducer states are idle (`agentActive=false`, no prompts), working (`agentActive=true`, no prompts), and blocked (one or more prompts, regardless of agent activity). Legal transitions are agent start/settle, prompt start/end, initial sync, and root shutdown. Duplicate starts are retained; unmatched ends clear defensively. On shutdown, queued reports are drained within 2100 ms; quit enqueues release first, while reload and other reasons never release. Invariants: prompt count never negative; blocked wins over working, which wins over idle; sequences strictly increase; identical state/message is suppressed; persisted reducer state is reused across reload.
 
 ## Deferred list
 
