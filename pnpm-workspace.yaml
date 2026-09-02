@@ -1,0 +1,4 @@
+allowBuilds:
+  '@embedded-postgres/darwin-arm64': false
+  '@google/genai': false
+  protobufjs: false
