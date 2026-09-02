@@ -93,7 +93,11 @@ Remove the global extension symlink, then start a new Atomic session or run `/re
 rm ~/.atomic/agent/extensions/herdr-atomic-reporter
 ```
 
-If the legacy project-local prototype was removed during cutover, restore it separately before reloading if you want the old behavior back.
+The legacy project-local prototype removed during cutover is preserved verbatim at
+[`reference/legacy-prototype.ts`](reference/legacy-prototype.ts). To return to the old behavior,
+copy it back to `<project>/.atomic/extensions/herdr-atomic-prototype.ts` and reload. Note that the
+prototype reports a simulated blocked state behind its `/herdr-block` command rather than a real one,
+and that running both at once double-reports to the same pane.
 
 ## Development
 
