@@ -40,4 +40,13 @@ describe("Herdr transport", () => {
     await transport.drain();
     expect(socket.requests).toEqual([]);
   });
+  test("retries once when the first connection closes without an acknowledgement", async () => {
+    socket = await createFakeSocket({ dropFirst: true });
+    const transport = createTransport(safeHerdrEnv(socket.path));
+    transport.reportState({ state: "idle", seq: 7 });
+    await transport.drain();
+    expect(socket.requests).toHaveLength(2);
+    expect(socket.requests[1]).toEqual(socket.requests[0]);
+  });
+
 });

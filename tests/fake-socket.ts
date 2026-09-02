@@ -11,13 +11,14 @@ export interface FakeSocket {
   close(): Promise<void>;
   waitFor(count: number, timeoutMs?: number): Promise<void>;
 }
-
-export async function createFakeSocket(): Promise<FakeSocket> {
+export async function createFakeSocket(options: { dropFirst?: boolean } = {}): Promise<FakeSocket> {
   const dir = await mkdtemp(join(tmpdir(), "herdr-atomic-test-"));
   const path = join(dir, "herdr.sock");
+  let connections = 0;
   if (path === REAL_SOCKET) throw new Error("Refusing to use the live Herdr socket");
   const requests: any[] = [];
   const server = net.createServer((socket) => {
+    connections += 1;
     let input = "";
     socket.setEncoding("utf8");
     socket.on("data", (chunk) => {
@@ -27,7 +28,8 @@ export async function createFakeSocket(): Promise<FakeSocket> {
         const line = input.slice(0, newline);
         input = input.slice(newline + 1);
         if (line) requests.push(JSON.parse(line));
-        socket.write('{"result":{}}\n');
+        if (options.dropFirst && connections === 1) socket.destroy();
+        else socket.write('{"result":{}}\n');
       }
     });
   });
