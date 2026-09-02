@@ -68,6 +68,53 @@ describe("extension event wiring", () => {
     ]);
   });
 
+  test("quit shutdown resolves only after the release is delivered", async () => {
+    socket = await createFakeSocket();
+    restoreEnv = useEnv(safeHerdrEnv(socket.path));
+    const { emit, pi } = harness();
+    extension(pi);
+    await emit("session_start", { reason: "startup" }, context);
+    await emit("session_shutdown", { reason: "quit" }, context);
+
+    const stateReport = socket.requests.find((request) => request.method === "pane.report_agent");
+    expect(socket.requests.at(-1)).toEqual({
+      id: "herdr-atomic-3",
+      method: "pane.release_agent",
+      params: {
+        pane_id: "test:pane",
+        source: "herdr:atomic",
+        agent: "atomic",
+        seq: stateReport.params.seq + 1,
+      },
+    });
+  });
+
+  test("non-quit shutdown drains pending reports without releasing", async () => {
+    socket = await createFakeSocket();
+    restoreEnv = useEnv(safeHerdrEnv(socket.path));
+    const { emit, pi } = harness();
+    extension(pi);
+    await emit("session_start", { reason: "startup" }, context);
+    await emit("session_shutdown", { reason: "reload" }, context);
+
+    expect(socket.requests.map((request) => request.method)).toEqual([
+      "pane.report_agent_session",
+      "pane.report_agent",
+    ]);
+  });
+
+  test("shutdown wait is bounded when the socket never acknowledges", async () => {
+    socket = await createFakeSocket({ respond: false });
+    restoreEnv = useEnv(safeHerdrEnv(socket.path));
+    const { emit, pi } = harness();
+    extension(pi);
+    await emit("session_start", { reason: "startup" }, context);
+
+    const startedAt = Date.now();
+    await emit("session_shutdown", { reason: "quit" }, context);
+    expect(Date.now() - startedAt).toBeLessThan(2_500);
+  }, 10_000);
+
   test("production root is TUI-only and RPC requires the explicit test opt-in", () => {
     expect(isRootSessionMode("tui", {})).toBeTrue();
     expect(isRootSessionMode("rpc", {})).toBeFalse();

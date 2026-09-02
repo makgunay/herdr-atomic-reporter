@@ -11,6 +11,26 @@ import {
 
 const STATE_KEY = "herdr-atomic-reporter:lifecycle:v1";
 
+// Covers the transport's 500 ms attempt plus 1500 ms retry, with a small
+// scheduling allowance, while ensuring an unavailable socket cannot block exit.
+const SHUTDOWN_DRAIN_TIMEOUT_MS = 2_100;
+
+function drainForShutdown(drain: Promise<void>): Promise<void> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(resolve, SHUTDOWN_DRAIN_TIMEOUT_MS);
+    void drain.then(
+      () => {
+        clearTimeout(timeout);
+        resolve();
+      },
+      () => {
+        clearTimeout(timeout);
+        resolve();
+      },
+    );
+  });
+}
+
 interface ReporterState {
   reducer: ReturnType<typeof initialReducerState>;
   sessionRef?: SessionRef;
@@ -86,5 +106,6 @@ export default function herdrAtomicReporter(pi: ExtensionAPI): void {
     if (!rootSession) return;
     rootSession = false;
     if (event?.reason === "quit") transport.release(reducer.nextSeq());
+    return drainForShutdown(transport.drain());
   });
 }

@@ -11,7 +11,7 @@ export interface FakeSocket {
   close(): Promise<void>;
   waitFor(count: number, timeoutMs?: number): Promise<void>;
 }
-export async function createFakeSocket(options: { dropFirst?: boolean } = {}): Promise<FakeSocket> {
+export async function createFakeSocket(options: { dropFirst?: boolean; respond?: boolean } = {}): Promise<FakeSocket> {
   const dir = await mkdtemp(join(tmpdir(), "herdr-atomic-test-"));
   const path = join(dir, "herdr.sock");
   let connections = 0;
@@ -29,7 +29,7 @@ export async function createFakeSocket(options: { dropFirst?: boolean } = {}): P
         input = input.slice(newline + 1);
         if (line) requests.push(JSON.parse(line));
         if (options.dropFirst && connections === 1) socket.destroy();
-        else socket.write('{"result":{}}\n');
+        else if (options.respond !== false) socket.write('{"result":{}}\n');
       }
     });
   });
