@@ -2,6 +2,10 @@
 
 A standalone user extension for installed `@bastani/atomic` 0.9.17. It reports an Atomic TUI root session to Herdr as idle, working, or blocked and publishes the Atomic session reference when one exists.
 
+## Status
+
+This is an interim community extension, not the official integration. Atomic's maintainers plan a built-in reporter once the Herdr-side contract is settled (see the discussion in herdrdev/herdr#2423 about recognizing an `herdr:atomic` source pair, process detection, and session restoration). Until that lands, this extension provides working presentation-level reporting today; when an official reporter ships, prefer it and uninstall this one.
+
 ## Requirements
 
 - Atomic 0.9.17
@@ -92,6 +96,8 @@ The nearest non-event alternatives are intentionally not used. The `workflow` to
 - The default `herdr:atomic` / `atomic` identity provides presentation-level acceptance only until Herdr recognizes that pair as a full-lifecycle authority. Screen/process fallback can still compete. Tier B is a local-only compatibility masquerade.
 - On machines where Herdr installed `~/.pi/agent/extensions/herdr-agent-state.ts`, Atomic also loads that TUI-only legacy global reporter. It is a second concurrent writer to the same pane (`herdr:pi` / `pi`) alongside this reporter's default `herdr:atomic` / `atomic` identity. The cutover deliberately does not remove or modify that Herdr-managed file because it is outside this project's scope. Disable one writer before enabling Tier B; otherwise both writers collide on the same identity with independent sequence counters.
 - State and sequence continuity survive `/reload` in the current Atomic process, not a process restart.
+- Herdr cannot restore Atomic sessions today: the session reference this extension publishes is retained by Herdr but there is no restore arm for Atomic, so it stays inert until Herdr adds one.
+- Herdr's own process detection varies with how Atomic is launched. A plain `atomic` shim is detected by basename; `npx`/`bunx` launches resolve to `dist/cli.js` and read as `cli` on the Herdr side. This does not block presentation-level reports, but it affects any future detection-gated behavior.
 
 ## Rollback
 
