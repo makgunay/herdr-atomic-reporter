@@ -1,0 +1,62 @@
+name: canary
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Atomic releases near-daily; check once a day.
+    - cron: "17 6 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  pinned:
+    name: pinned atomic (regression guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+      - run: pnpm install --frozen-lockfile
+      - name: Report atomic version under test
+        run: node -p "'atomic ' + require('@bastani/atomic/package.json').version"
+      - run: npm test
+
+  latest:
+    name: latest atomic (upstream drift canary)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+      - run: pnpm install --frozen-lockfile
+      - name: Bump to latest atomic (CI-only, not committed)
+        run: pnpm add --save-exact @bastani/atomic@latest
+      - name: Report atomic version under test
+        id: version
+        run: |
+          v=$(node -p "require('@bastani/atomic/package.json').version")
+          echo "atomic $v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - run: npm test
+      - name: Open drift issue on scheduled failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          title="Drift: extension fails against @bastani/atomic@${VERSION:-latest}"
+          if [ -z "$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')" ]; then
+            gh issue create --title "$title" \
+              --body "The scheduled canary failed against the latest Atomic release. See the run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The pinned-version job status in the same run tells you whether this is upstream drift (pinned green, latest red) or a repo regression (both red)."
+          fi

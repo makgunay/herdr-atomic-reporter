@@ -121,3 +121,5 @@ pnpm test
 ```
 
 The suite uses a real temporary Unix socket. Its preload guard refuses the known live socket and any inherited environment with live Herdr reporting enabled before replacing the environment with disabled test values; each transport test then creates and uses its own fake pane endpoint.
+
+A scheduled GitHub Actions canary (`.github/workflows/canary.yml`) runs the suite daily against both the pinned Atomic version and `@latest`, and opens a repo issue when only the latest leg fails — separating upstream drift from repo regressions.
