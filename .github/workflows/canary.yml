@@ -45,7 +45,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: pnpm install --frozen-lockfile
       - name: Bump to latest atomic (CI-only, not committed)
-        run: pnpm add --save-exact @bastani/atomic@latest
+        # pnpm 11 applies a default minimumReleaseAge cooldown that silently
+        # resolves @latest to an older release while a fresh one is young —
+        # exactly the window a drift canary exists to test. Disable it here
+        # only; the pinned job keeps the frozen lockfile.
+        run: pnpm add --save-exact @bastani/atomic@latest --config.minimumReleaseAge=0
       - name: Report atomic version under test
         id: version
         run: |
