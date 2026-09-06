@@ -31,6 +31,10 @@ jobs:
 
   latest:
     name: latest atomic (upstream drift canary)
+    # Serialized after pinned so the drift-issue step can tell upstream drift
+    # (pinned green, latest red) apart from a repo/CI regression (both red).
+    needs: pinned
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +54,7 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
       - run: npm test
       - name: Open drift issue on scheduled failure
-        if: failure() && github.event_name == 'schedule'
+        if: failure() && github.event_name == 'schedule' && needs.pinned.result == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -58,5 +62,5 @@ jobs:
           title="Drift: extension fails against @bastani/atomic@${VERSION:-latest}"
           if [ -z "$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')" ]; then
             gh issue create --title "$title" \
-              --body "The scheduled canary failed against the latest Atomic release. See the run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The pinned-version job status in the same run tells you whether this is upstream drift (pinned green, latest red) or a repo regression (both red)."
+              --body "The scheduled canary failed against the latest Atomic release while the pinned-version job passed in the same run — upstream drift, not a repo regression. See the run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}."
           fi
