@@ -1,4 +1,11 @@
 allowBuilds:
+  # embedded-postgres backs Atomic's optional DBOS durable backend; this
+  # extension's suite never exercises it, so the postgres download/build is
+  # denied on every platform (CI runs linux-x64; dev machines differ).
   '@embedded-postgres/darwin-arm64': false
+  '@embedded-postgres/darwin-x64': false
+  '@embedded-postgres/linux-arm64': false
+  '@embedded-postgres/linux-x64': false
+  '@embedded-postgres/windows-x64': false
   '@google/genai': false
   protobufjs: false
