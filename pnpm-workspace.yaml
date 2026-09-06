@@ -7,5 +7,8 @@ allowBuilds:
   '@embedded-postgres/linux-arm64': false
   '@embedded-postgres/linux-x64': false
   '@embedded-postgres/windows-x64': false
+  # esbuild (a dependency from atomic 0.9.18 on) ships its platform binary
+  # through optional dependencies; its install script is only a validator.
+  esbuild: false
   '@google/genai': false
   protobufjs: false
