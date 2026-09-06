@@ -25,3 +25,17 @@ Herdr pane. Public repo, pushed to github.com/makgunay/herdr-atomic-reporter.
   official reporter pending herdrdev/herdr#2423; related upstream threads are
   bastani-inc/atomic#2873 (trust-prompt emission question) and the closed
   bastani-inc/atomic#2551 (superseded block-door design, historical context).
+
+## Releasing
+
+- Versions follow semver; `package.json` `version` is the source of truth.
+- Process: update `CHANGELOG.md` (move entries from `[Unreleased]` into a new
+  dated version section and refresh the compare links), bump `package.json`
+  `version`, commit, then create an annotated tag `v<version>` and push with
+  `--follow-tags`, and publish a GitHub release from the tag with
+  `gh release create v<version>` using the changelog section as notes.
+- Released changelog sections are immutable; new work goes under
+  `[Unreleased]`.
+- A version bump that also bumps the pinned `@bastani/atomic` declares
+  compatibility with that Atomic version — run `npm test` first and say so in
+  the changelog.
