@@ -1,6 +1,6 @@
 {
   "name": "herdr-atomic-reporter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@11.25.0",
@@ -9,6 +9,6 @@
     "test": "bun run scripts/run-tests.ts"
   },
   "dependencies": {
-    "@bastani/atomic": "0.9.17"
+    "@bastani/atomic": "0.9.18"
   }
 }

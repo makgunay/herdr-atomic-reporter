@@ -6,6 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-06
+
+### Changed
+
+- Bumped the pinned `@bastani/atomic` from 0.9.17 to 0.9.18, declaring
+  compatibility: the full suite passes against 0.9.18 locally and on both
+  canary legs.
+- Re-verified the version-scoped README claims against 0.9.18's shipped
+  code: still exactly 36 public `pi.on(...)` events, still no workflow
+  lifecycle or Intercom-ask events (the negative findings hold), and the
+  `ui_prompt_start`/`ui_prompt_end` pair and `sessionScopedExtensionState`
+  remain in place. README updated accordingly.
+- Requirements note clarified: the pin is 0.9.18, and any Atomic release
+  with the `ui_prompt` events (0.9.16+) should work.
+
 ## [0.1.0] - 2026-09-06
 
 First public release: a standalone user extension that reports an Atomic TUI
@@ -44,5 +59,6 @@ session to a Herdr pane as idle, working, or blocked.
 - Atomic 0.9.17 (pinned) and Atomic 0.9.18 (`@latest` canary leg), both
   green as of this release.
 
-[Unreleased]: https://github.com/makgunay/herdr-atomic-reporter/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/makgunay/herdr-atomic-reporter/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/makgunay/herdr-atomic-reporter/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/makgunay/herdr-atomic-reporter/releases/tag/v0.1.0

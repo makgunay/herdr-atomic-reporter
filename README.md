@@ -1,6 +1,6 @@
 # Herdr reporter for Atomic
 
-A standalone user extension for installed `@bastani/atomic` 0.9.17. It reports an Atomic TUI root session to Herdr as idle, working, or blocked and publishes the Atomic session reference when one exists.
+A standalone user extension for installed `@bastani/atomic` 0.9.18. It reports an Atomic TUI root session to Herdr as idle, working, or blocked and publishes the Atomic session reference when one exists.
 
 ## Status
 
@@ -8,7 +8,7 @@ This is an interim community extension, not the official integration. Atomic's m
 
 ## Requirements
 
-- Atomic 0.9.17
+- Atomic 0.9.18 (the pinned version; any release with the `ui_prompt` events, 0.9.16+, should work)
 - Node.js and pnpm (to install the exact runtime dependency)
 - A Herdr-managed pane exporting `HERDR_ENV=1`, `HERDR_SOCKET_PATH`, and `HERDR_PANE_ID`
 
@@ -38,7 +38,7 @@ Start a new Atomic session or run `/reload` in an existing one. Production activ
 - `working` from `agent_start` until qualifying `agent_settled`
 - `idle` otherwise
 
-Precedence is `blocked > working > idle`. Atomic 0.9.17 already coalesces overlapping UI prompts into one outer span; the reducer also tracks spans defensively and cannot decrement below zero. An active prompt's title is preserved verbatim. If the title is absent, the message is `Waiting for input`.
+Precedence is `blocked > working > idle`. Atomic already coalesces overlapping UI prompts into one outer span; the reducer also tracks spans defensively and cannot decrement below zero. An active prompt's title is preserved verbatim. If the title is absent, the message is `Waiting for input`.
 
 Identical state/message pairs are suppressed. Report sequence numbers start from `Date.now() * 1000`, increase strictly, and survive `/reload` through `sessionScopedExtensionState`. Outbound requests share one serialized writer for this extension's identity and use one 500 ms attempt followed by one 1500 ms retry. This discipline cannot prevent a separate extension from writing to the same pane.
 
@@ -78,7 +78,7 @@ The end-to-end test launches the installed Atomic binary in RPC mode with an exp
 
 ## Workflow-lifecycle verification
 
-**Negative finding:** installed `@bastani/atomic` 0.9.17 exposes exactly 36 public `pi.on(...)` events (`dist/core/extensions/api-types.d.ts:26-62`), and none is a workflow lifecycle event. A background workflow entering `awaiting_input` is recorded only for internal dedupe/status/UI purposes: `emitStageAwaitingInputNoticeOnce` and `emitRunAwaitingInputNoticeOnce` (`dist/builtin/workflows/src/extension/index.bundle.mjs:98023-98038`) add a dedupe key and never call the lifecycle delivery path used by terminal, control, and budget events (`:97991-98020`, `:98039-98047`). The installed documentation confirms this is deliberate: awaiting-input is tracked without waking the main agent (`docs/workflows.md:3284,3292,3648-3652`). Therefore this reporter cannot consume workflow waits and does not fake them.
+**Negative finding:** installed `@bastani/atomic` 0.9.17 exposes exactly 36 public `pi.on(...)` events (re-checked on 0.9.18: still 36 events, still none workflow- or Intercom-related) (`dist/core/extensions/api-types.d.ts:26-62`), and none is a workflow lifecycle event. A background workflow entering `awaiting_input` is recorded only for internal dedupe/status/UI purposes: `emitStageAwaitingInputNoticeOnce` and `emitRunAwaitingInputNoticeOnce` (`dist/builtin/workflows/src/extension/index.bundle.mjs:98023-98038`) add a dedupe key and never call the lifecycle delivery path used by terminal, control, and budget events (`:97991-98020`, `:98039-98047`). The installed documentation confirms this is deliberate: awaiting-input is tracked without waking the main agent (`docs/workflows.md:3284,3292,3648-3652`). Therefore this reporter cannot consume workflow waits and does not fake them.
 
 The workflow-looking bundle strings `workflow_stage_admission`, `workflow_stage_route`, `workflow_stage_message`, `workflow_ui`, `workflow_not_found`, and `workflow_tool` are bundler initializers, internal Intercom broker protocol frames, or provenance-tag values, not subscribable extension events. Type-level verification agrees: `tsc` rejects `pi.on("workflow_awaiting_input", ...)` with TS2769 because that name is absent from the public overload union.
 
@@ -91,7 +91,7 @@ The nearest non-event alternatives are intentionally not used. The `workflow` to
 ## Known limitations
 
 - Atomic's project-trust prompt is host-owned and is not exposed through `ui_prompt_start` / `ui_prompt_end`, so this extension cannot report that trust wait.
-- Background workflow waits are invisible because Atomic 0.9.17 exposes no workflow lifecycle extension event; they are not reported as blocked.
+- Background workflow waits are invisible because Atomic (verified through 0.9.18) exposes no workflow lifecycle extension event; they are not reported as blocked.
 - Supervisor and Intercom asks are invisible from extension land in this design; they are not reported as blocked.
 - The default `herdr:atomic` / `atomic` identity provides presentation-level acceptance only until Herdr recognizes that pair as a full-lifecycle authority. Screen/process fallback can still compete. Tier B is a local-only compatibility masquerade.
 - On machines where Herdr installed `~/.pi/agent/extensions/herdr-agent-state.ts`, Atomic also loads that TUI-only legacy global reporter. It is a second concurrent writer to the same pane (`herdr:pi` / `pi`) alongside this reporter's default `herdr:atomic` / `atomic` identity. The cutover deliberately does not remove or modify that Herdr-managed file because it is outside this project's scope. Disable one writer before enabling Tier B; otherwise both writers collide on the same identity with independent sequence counters.
