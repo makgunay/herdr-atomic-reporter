@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Committed `minimumReleaseAge: 0` as repo-wide pnpm policy: this project
+  tracks Atomic releases the day they publish, and pnpm 11's default
+  release-age cooldown both held `@latest` back and failed frozen-lockfile
+  installs whose committed entries were younger than the cooldown.
+
 ## [0.1.1] - 2026-09-06
 
 ### Changed

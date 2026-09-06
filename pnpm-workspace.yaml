@@ -1,3 +1,12 @@
+# This project deliberately tracks @bastani/atomic releases the day they
+# publish — the canary exists for exactly that window. pnpm 11's default
+# release-age cooldown otherwise resolves @latest to an older version AND
+# fails frozen-lockfile installs whose committed entries are younger than
+# the cooldown (ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION), so it is disabled
+# repo-wide as committed policy. Same stance as the Atomic monorepo's npm
+# min-release-age=0.
+minimumReleaseAge: 0
+
 allowBuilds:
   # embedded-postgres backs Atomic's optional DBOS durable backend; this
   # extension's suite never exercises it, so the postgres download/build is

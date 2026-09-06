@@ -45,15 +45,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: pnpm install --frozen-lockfile
       - name: Bump to latest atomic (CI-only, not committed)
-        # pnpm 11 applies a default minimumReleaseAge cooldown that silently
-        # resolves @latest to an older release while a fresh one is young —
-        # exactly the window a drift canary exists to test. Disable it here
-        # only; the pinned job keeps the frozen lockfile. strictDepBuilds is
-        # also relaxed for this leg only, so a new upstream dependency with an
+        # minimumReleaseAge is 0 as committed policy in pnpm-workspace.yaml,
+        # so @latest resolves to the true newest release. strictDepBuilds is
+        # relaxed for this leg only, so a new upstream dependency with an
         # install script degrades to an ignored-build warning instead of an
         # infra failure that masquerades as drift (scripts stay unrun either
         # way; the pinned leg still enforces the committed allowBuilds list).
-        run: pnpm add --save-exact @bastani/atomic@latest --config.minimumReleaseAge=0 --config.strictDepBuilds=false
+        run: pnpm add --save-exact @bastani/atomic@latest --config.strictDepBuilds=false
       - name: Report atomic version under test
         id: version
         run: |
