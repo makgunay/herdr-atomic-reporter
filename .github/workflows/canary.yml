@@ -26,7 +26,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: pnpm install --frozen-lockfile
       - name: Report atomic version under test
-        run: node -p "'atomic ' + require('@bastani/atomic/package.json').version"
+        run: node -p "'atomic ' + require('./node_modules/@bastani/atomic/package.json').version"
       - run: npm test
 
   latest:
@@ -49,7 +49,7 @@ jobs:
       - name: Report atomic version under test
         id: version
         run: |
-          v=$(node -p "require('@bastani/atomic/package.json').version")
+          v=$(node -p "require('./node_modules/@bastani/atomic/package.json').version")
           echo "atomic $v"
           echo "version=$v" >> "$GITHUB_OUTPUT"
       - run: npm test
