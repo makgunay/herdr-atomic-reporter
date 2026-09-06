@@ -74,7 +74,7 @@ An absolute Atomic session file is sent as `agent_session_path`; otherwise a non
 
 ## Acceptance test boundary
 
-The end-to-end test launches the installed Atomic 0.9.17 binary in RPC mode with an explicit test-only root opt-in and a temporary session directory. It sends one RPC prompt, observes the real host emit initial idle, agent working, and settled idle transitions, then closes stdin and verifies that the graceful quit delivers `pane.release_agent` before the child exits. Provider completion content is not part of the assertion. Every child Herdr variable is explicitly overridden to a temporary fake socket and fake pane id.
+The end-to-end test launches the installed Atomic binary in RPC mode with an explicit test-only root opt-in, a temporary session directory, and an environment scrubbed of both Herdr variables (overridden to a temporary fake socket and fake pane id) and provider credentials. The credential scrub makes the child deterministic on any machine: it proves the extension loads in the real host, reports the session reference and initial idle state, survives a prompt that has no usable provider without crashing or corrupting the reporter, and delivers `pane.release_agent` with the next sequence number on graceful quit. Working and blocked transitions are asserted by the in-process wiring tests, which drive the real installed loader's event delivery; no test depends on a live model call.
 
 ## Workflow-lifecycle verification
 

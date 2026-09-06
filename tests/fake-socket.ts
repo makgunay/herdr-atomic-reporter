@@ -65,5 +65,17 @@ export function safeHerdrEnv(socketPath: string): NodeJS.ProcessEnv {
   delete env.HERDR_TAB_ID;
   delete env.HERDR_WORKSPACE_ID;
   delete env.HERDR_BIN_PATH;
+	// Spawned children must behave identically with and without developer
+	// credentials. Without this scrub, a locally exported provider key lets the
+	// child run a real model turn while CI cannot, and the e2e asserts two
+	// different behaviors depending on whose machine it runs on.
+	for (const key of Object.keys(env)) {
+		if (
+			/(API_?KEY|_TOKEN|_SECRET|_CREDENTIALS?)$/i.test(key) ||
+			/^(AWS|AZURE|GOOGLE|GEMINI|ANTHROPIC|OPENAI|OPENROUTER|XAI|GROQ|MISTRAL|DEEPSEEK|BASETEN)_/i.test(key)
+		) {
+			delete env[key];
+		}
+	}
   return env;
 }
